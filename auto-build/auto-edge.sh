@@ -2,8 +2,9 @@
 
 #dependencies: jq, squashfs-tools, wget, git, curl, github-cli, dpkg
 #variables taken from https://github.com/megamaced/spotify-easyrpm/
-V_HTTP_REPO="$(curl -s -H 'Snap-Device-Series: 16' http://api.snapcraft.io/v2/snaps/info/spotify | jq -r '."channel-map"[] | select(.channel.name=='\"stable\"') | .download.url')"
-V_HTTP_VERSION="$(curl -s -H 'Snap-Device-Series: 16' http://api.snapcraft.io/v2/snaps/info/spotify | jq -r '."channel-map"[] | select(.channel.name=='\"stable\"') | .version')" 
+V_HTTP_REPO="$(curl -s -H 'Snap-Device-Series: 16' http://api.snapcraft.io/v2/snaps/info/spotify | jq -r '."channel-map"[] | select(.channel.name=='\"edge\"') | .download.url')"
+V_HTTP_VERSION="$(curl -s -H 'Snap-Device-Series: 16' http://api.snapcraft.io/v2/snaps/info/spotify | jq -r '."channel-map"[] | select(.channel.name=='\"edge\"') | .version')" 
+V_HTTP_VERSION_STABLE="$(curl -s -H 'Snap-Device-Series: 16' http://api.snapcraft.io/v2/snaps/info/spotify | jq -r '."channel-map"[] | select(.channel.name=='\"stable\"') | .version')"
 
 #Check if snap is up
 SNAP_STATUS="$(curl -s -I http://api.snapcraft.io/ | grep -c '200 OK')"
@@ -15,6 +16,16 @@ else
     echo "Snap Store is offline, canceling build"
     exit
 fi
+
+#make sure Edge and Stable Versions are different
+if [ "$V_HTTP_VERSION" == "$V_HTTP_VERSION_STABLE" ]
+then
+    echo "Edge version is the same as stable, no need to build"
+    exit
+else
+    :
+fi
+
 #Check if there is a new package
 if [ "$V_HTTP_VERSION" == "1.1.55.498.gf9a83c60" ]
 then
@@ -22,18 +33,18 @@ then
     exit
 else
     #replace version number in checking
-    sed -i 's/1.1.55.498.gf9a83c60/'"$V_HTTP_VERSION"'/g' ./auto.sh
+    sed -i 's/1.1.55.498.gf9a83c60/'"$V_HTTP_VERSION"'/g' ./auto-edge.sh
     echo 'New Package Found! Version:'"$V_HTTP_VERSION"
 fi
 
 #remove any old data if it is there
 rm ./*.snap
 rm -r ./snap_files
-rm -r ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64
-rm ./spotify-unofficial_"$V_HTTP_VERSION"_amd64.deb
+rm -r ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64
+rm ./spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64.deb
 
 mkdir ./debpkgs/
-mkdir ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64
+mkdir ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64
 mkdir ./snap_files
 
 echo ""
@@ -51,22 +62,22 @@ echo ""
 echo "Copying files for package..."
 echo ""
 cd ../
-mkdir ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64/usr
-mkdir ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64/usr/share
-mkdir ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64/usr/bin
-mkdir ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64/usr/share/spotify/
-mkdir ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64/usr/share/doc
-mkdir ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64/DEBIAN
-mv ./snap_files/squashfs-root/usr/share/spotify/ ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64/usr/share/
-mv ./snap_files/squashfs-root/usr/share/doc/spotify-client/ ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64/usr/share/doc/spotify-client
+mkdir ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64/usr
+mkdir ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64/usr/share
+mkdir ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64/usr/bin
+mkdir ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64/usr/share/spotify/
+mkdir ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64/usr/share/doc
+mkdir ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64/DEBIAN
+mv ./snap_files/squashfs-root/usr/share/spotify/ ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64/usr/share/
+mv ./snap_files/squashfs-root/usr/share/doc/spotify-client/ ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64/usr/share/doc/spotify-client
 
 echo ""
 echo "Creating control files..."
 echo ""
 #control files taken from last Debian Package provided by spotify. They own the copyright to these files
 #create control file with correct version number
-cat << EOF > ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64/DEBIAN/control
-Package: spotify-unofficial
+cat << EOF > ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64/DEBIAN/control
+Package: spotify-unofficial-edge
 Version: 1:$V_HTTP_VERSION
 License: https://www.spotify.com/legal/end-user-agreement
 Vendor: Spotify AB
@@ -81,7 +92,7 @@ Homepage: https://www.spotify.com
 Description: Spotify streaming music client
 EOF
 #create postinst file
-cat << EOF > ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64/DEBIAN/postinst
+cat << EOF > ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64/DEBIAN/postinst
 #!/bin/sh
 #
 # Copyright (c) 2015 Spotify AB
@@ -155,7 +166,7 @@ fi
 
 EOF
 #create prerm file
-cat << EOF > ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64/DEBIAN/prerm
+cat << EOF > ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64/DEBIAN/prerm
 #!/bin/sh
 #
 # Copyright (c) 2015 Spotify AB
@@ -198,7 +209,7 @@ fi
 EOF
 
 # Create symbolic link in /usr/bin
-cd ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64/usr/bin
+cd ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64/usr/bin
 ln -s ../share/spotify/spotify spotify
 
 echo ""
@@ -210,15 +221,15 @@ cd ../
 cd ../
 cd ../
 #fix permissions
-chmod 755 ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64/DEBIAN/postinst
-chmod 755 ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64/DEBIAN/prerm
-dpkg --build ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64/
-mv ./debpkgs/spotify-unofficial_"$V_HTTP_VERSION"_amd64.deb ./
-echo "spotify-unofficial package created in Build Directory"
+chmod 755 ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64/DEBIAN/postinst
+chmod 755 ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64/DEBIAN/prerm
+dpkg --build ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64/
+mv ./debpkgs/spotify-unofficial-edge_"$V_HTTP_VERSION"_amd64.deb ./
+echo "spotify-unofficial-edge package created in Build Directory"
 
 cat << EOF > ../release_notes.md
 Auto-built package
-$V_HTTP_VERSION stable
+$V_HTTP_VERSION edge
 EOF
 
 #Size check in case of errors in build
@@ -227,8 +238,9 @@ SIZE_CHECK=$(wc -c ./*.deb | awk '{print $1}')
 if [ "$SIZE_CHECK" -gt 10000000 ]
 then
     gh auth login --with-token < ../token.txt
-    gh release create "$V_HTTP_VERSION" ./*.deb -F ../release_notes.md  -t "Stable $V_HTTP_VERSION"
+    gh release create "$V_HTTP_VERSION""-edge" ./*.deb -p -F ../release_notes.md  -t "Edge $V_HTTP_VERSION"
 else
     rm ./*.deb
     echo ".deb file is too small, removing and not creating a release"
 fi
+
