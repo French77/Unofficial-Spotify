@@ -27,13 +27,13 @@ else
 fi
 
 #Check if there is a new package
-if [ "$V_HTTP_VERSION" == "1.1.55.498.gf9a83c60" ]
+if [ "$V_HTTP_VERSION" == "1.1.56.595.g2d2da0de" ]
 then
     echo "no need to re-build. Try again in another hour!"
     exit
 else
     #replace version number in checking
-    sed -i 's/1.1.55.498.gf9a83c60/'"$V_HTTP_VERSION"'/g' ./auto-edge.sh
+    sed -i 's/1.1.56.595.g2d2da0de/'"$V_HTTP_VERSION"'/g' ./auto-edge.sh
     echo 'New Package Found! Version:'"$V_HTTP_VERSION"
 fi
 
@@ -238,7 +238,7 @@ SIZE_CHECK=$(wc -c ./*.deb | awk '{print $1}')
 if [ "$SIZE_CHECK" -gt 10000000 ]
 then
     gh auth login --with-token < ../token.txt
-    gh release create "$V_HTTP_VERSION""-edge" ./*.deb -p -F ../release_notes.md  -t "Edge $V_HTTP_VERSION"
+    gh release create -R github.com/ThePoorPilot/Unofficial-Spotify "$V_HTTP_VERSION""-edge" ./*.deb -p -F ../release_notes.md  -t "Edge $V_HTTP_VERSION"
 else
     rm ./*.deb
     echo ".deb file is too small, removing and not creating a release"
